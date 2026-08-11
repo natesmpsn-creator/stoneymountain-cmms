@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+*.log
+client-src/node_modules/
+client-src/build/
+public/
+.vscode/
+.idea/
+dist/
