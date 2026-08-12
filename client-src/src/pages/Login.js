@@ -61,12 +61,6 @@ function Login({ onLogin }) {
             {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
-
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: '#666' }}>
-          Demo credentials:<br />
-          nate@stoneymt.local / changeme123<br />
-          dalton@stoneymt.local / changeme123
-        </p>
       </div>
     </div>
   );
