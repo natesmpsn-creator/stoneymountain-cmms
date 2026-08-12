@@ -105,6 +105,14 @@ const initializeDatabase = async () => {
       )
     `);
 
+    await pool.query(`
+      ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS job_plan_id INTEGER REFERENCES job_plans(id)
+    `);
+
+    await pool.query(`
+      ALTER TABLE pm_schedules ADD COLUMN IF NOT EXISTS completed_by INTEGER REFERENCES users(id)
+    `);
+
     console.log('Database tables initialized');
   } catch (err) {
     console.error('Database initialization error:', err);
