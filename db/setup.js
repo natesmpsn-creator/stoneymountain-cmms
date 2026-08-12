@@ -100,12 +100,12 @@ const setup = async () => {
 
     await pool.query(
       `INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-      ['nate@stoneymountain.local', nateHash, 'Nate Simpson']
+      ['nate@stoneymt.local', nateHash, 'Nate Simpson']
     );
 
     await pool.query(
       `INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-      ['dalton@stoneymountain.local', daltonHash, 'Dalton McKie']
+      ['dalton@stoneymt.local', daltonHash, 'Dalton McKie']
     );
 
     const jobPlanResult = await pool.query(

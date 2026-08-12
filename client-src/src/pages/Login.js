@@ -27,9 +27,9 @@ function Login({ onLogin }) {
     <div className="container" style={{ maxWidth: '400px', marginTop: '40px' }}>
       <div className="card">
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <img src="/logo.png" alt="Stoneymountain Baptist Church" style={{ height: '80px', marginBottom: '15px' }} />
+          <img src="/logo.png" alt="Stoney Mountain Baptist Church" style={{ height: '80px', marginBottom: '15px' }} />
           <h1 style={{ margin: '0', fontSize: '24px' }}>Maintenance Manager</h1>
-          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>Stoneymountain Baptist Church</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>Stoney Mountain Baptist Church</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -42,7 +42,7 @@ function Login({ onLogin }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="nate@stoneymountain.local"
+              placeholder="nate@stoneymt.local"
             />
           </div>
 
@@ -64,8 +64,8 @@ function Login({ onLogin }) {
 
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: '#666' }}>
           Demo credentials:<br />
-          nate@stoneymountain.local / changeme123<br />
-          dalton@stoneymountain.local / changeme123
+          nate@stoneymt.local / changeme123<br />
+          dalton@stoneymt.local / changeme123
         </p>
       </div>
     </div>
