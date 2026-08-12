@@ -22,6 +22,97 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 
+const initializeDatabase = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS assets (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(100),
+        location VARCHAR(255),
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS maintenance_requests (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        asset_id INTEGER REFERENCES assets(id),
+        priority VARCHAR(50) DEFAULT 'medium',
+        status VARCHAR(50) DEFAULT 'open',
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_plans (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_plan_items (
+        id SERIAL PRIMARY KEY,
+        job_plan_id INTEGER REFERENCES job_plans(id) ON DELETE CASCADE,
+        item_name VARCHAR(255) NOT NULL,
+        sort_order INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pm_schedules (
+        id SERIAL PRIMARY KEY,
+        asset_id INTEGER REFERENCES assets(id),
+        task_name VARCHAR(255) NOT NULL,
+        frequency_days INTEGER,
+        job_plan_id INTEGER REFERENCES job_plans(id),
+        last_completed_date DATE,
+        next_due_date DATE NOT NULL,
+        completed_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pm_completion_items (
+        id SERIAL PRIMARY KEY,
+        pm_schedule_id INTEGER REFERENCES pm_schedules(id),
+        job_plan_item_id INTEGER REFERENCES job_plan_items(id),
+        status VARCHAR(50),
+        comment TEXT,
+        completed_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    console.log('Database tables initialized');
+  } catch (err) {
+    console.error('Database initialization error:', err);
+  }
+};
+
+initializeDatabase();
+
 // Auth middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -173,6 +264,57 @@ app.post('/api/job-plans', authenticateToken, async (req, res) => {
     }
 
     res.status(201).json(planResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/job-plans/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, description, items } = req.body;
+
+  try {
+    const updateResult = await pool.query(`
+      UPDATE job_plans
+      SET name = $1, description = $2
+      WHERE id = $3
+      RETURNING *
+    `, [name, description, id]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Job plan not found' });
+    }
+
+    if (items && items.length > 0) {
+      await pool.query(`DELETE FROM job_plan_items WHERE job_plan_id = $1`, [id]);
+
+      for (let i = 0; i < items.length; i++) {
+        await pool.query(`
+          INSERT INTO job_plan_items (job_plan_id, item_name, sort_order, created_at)
+          VALUES ($1, $2, $3, NOW())
+        `, [id, items[i], i + 1]);
+      }
+    }
+
+    res.json(updateResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/job-plans/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`
+      DELETE FROM job_plans WHERE id = $1 RETURNING *
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Job plan not found' });
+    }
+
+    res.json({ message: 'Job plan deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -8,6 +8,7 @@ function JobPlansPage() {
   const [jobPlans, setJobPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -50,6 +51,22 @@ function JobPlansPage() {
     });
   };
 
+  const startEdit = (plan) => {
+    setEditingId(plan.id);
+    setFormData({
+      name: plan.name,
+      description: plan.description,
+      items: plan.items && plan.items.length > 0 ? plan.items.map(i => i.item_name || i) : ['', '', '']
+    });
+    setShowForm(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({ name: '', description: '', items: ['', '', ''] });
+    setShowForm(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -66,17 +83,37 @@ function JobPlansPage() {
     }
 
     try {
-      await axios.post('/api/job-plans', {
-        name: formData.name,
-        description: formData.description,
-        items: filteredItems
-      });
+      if (editingId) {
+        await axios.patch(`/api/job-plans/${editingId}`, {
+          name: formData.name,
+          description: formData.description,
+          items: filteredItems
+        });
+      } else {
+        await axios.post('/api/job-plans', {
+          name: formData.name,
+          description: formData.description,
+          items: filteredItems
+        });
+      }
 
       setFormData({ name: '', description: '', items: ['', '', ''] });
+      setEditingId(null);
       setShowForm(false);
       fetchJobPlans();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create job plan');
+      setError(err.response?.data?.error || 'Failed to save job plan');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure? This will delete the job plan.')) return;
+
+    try {
+      await axios.delete(`/api/job-plans/${id}`);
+      fetchJobPlans();
+    } catch (err) {
+      console.error('Failed to delete job plan:', err);
     }
   };
 
@@ -89,7 +126,7 @@ function JobPlansPage() {
 
       <div className="container">
         <div className="card">
-          <h3 style={{ marginBottom: '15px' }}>Create Job Plan</h3>
+          <h3 style={{ marginBottom: '15px' }}>{editingId ? 'Edit Job Plan' : 'Create Job Plan'}</h3>
           {error && (
             <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '4px', marginBottom: '20px' }}>
               {error}
@@ -155,8 +192,8 @@ function JobPlansPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button type="submit">Create Job Plan</button>
-                <button type="button" className="secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit">{editingId ? 'Update Job Plan' : 'Create Job Plan'}</button>
+                <button type="button" className="secondary" onClick={cancelEdit}>Cancel</button>
               </div>
             </form>
           )}
@@ -174,13 +211,29 @@ function JobPlansPage() {
                 <div key={plan.id} style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '4px' }}>
                   <h4>{plan.name}</h4>
                   {plan.description && <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>{plan.description}</p>}
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>
                     <p style={{ marginBottom: '8px' }}><strong>Checklist items:</strong></p>
                     <ul style={{ marginLeft: '20px' }}>
                       {plan.items && plan.items.map((item, idx) => (
-                        <li key={idx}>{item}</li>
+                        <li key={idx}>{item.item_name || item}</li>
                       ))}
                     </ul>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      className="secondary"
+                      onClick={() => startEdit(plan)}
+                      style={{ flex: 1, padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="danger"
+                      onClick={() => handleDelete(plan.id)}
+                      style={{ flex: 1, padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
