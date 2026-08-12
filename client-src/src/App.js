@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import RequestForm from './pages/RequestForm';
 import AssetsPage from './pages/AssetsPage';
 import PMPage from './pages/PMPage';
+import JobPlansPage from './pages/JobPlansPage';
 import HistoryPage from './pages/HistoryPage';
 import './App.css';
 
@@ -44,6 +45,7 @@ function App() {
         <Route path="/request/new" element={token ? <RequestForm /> : <Navigate to="/login" />} />
         <Route path="/assets" element={token ? <AssetsPage /> : <Navigate to="/login" />} />
         <Route path="/pm-schedules" element={token ? <PMPage /> : <Navigate to="/login" />} />
+        <Route path="/job-plans" element={token ? <JobPlansPage /> : <Navigate to="/login" />} />
         <Route path="/history" element={token ? <HistoryPage /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>

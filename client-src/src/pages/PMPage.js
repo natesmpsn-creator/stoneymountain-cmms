@@ -8,15 +8,19 @@ function PMPage() {
   const navigate = useNavigate();
   const [schedules, setSchedules] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [jobPlans, setJobPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedAssets, setSelectedAssets] = useState(new Set());
   const [formData, setFormData] = useState({
     asset_id: '',
     task_name: '',
     frequency_days: 30,
     last_completed_date: '',
-    next_due_date: ''
+    next_due_date: '',
+    job_plan_id: ''
   });
 
   useEffect(() => {
@@ -25,12 +29,14 @@ function PMPage() {
 
   const fetchData = async () => {
     try {
-      const [schedRes, assetRes] = await Promise.all([
+      const [schedRes, assetRes, planRes] = await Promise.all([
         axios.get('/api/schedules'),
-        axios.get('/api/assets')
+        axios.get('/api/assets'),
+        axios.get('/api/job-plans')
       ]);
       setSchedules(schedRes.data);
       setAssets(assetRes.data);
+      setJobPlans(planRes.data);
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -46,35 +52,87 @@ function PMPage() {
     });
   };
 
+  const toggleAssetSelection = (assetId) => {
+    const newSelected = new Set(selectedAssets);
+    if (newSelected.has(assetId)) {
+      newSelected.delete(assetId);
+    } else {
+      newSelected.add(assetId);
+    }
+    setSelectedAssets(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssets.size === assets.length) {
+      setSelectedAssets(new Set());
+    } else {
+      setSelectedAssets(new Set(assets.map(a => a.id)));
+    }
+  };
+
   const handleAddSchedule = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.asset_id || !formData.task_name) {
-      setError('Please select an asset and enter a task name');
-      return;
-    }
+    if (bulkMode) {
+      if (selectedAssets.size === 0 || !formData.task_name || !formData.next_due_date) {
+        setError('Select equipment, enter task name, and set due date');
+        return;
+      }
 
-    try {
-      await axios.post('/api/schedules', {
-        asset_id: formData.asset_id || null,
-        task_name: formData.task_name,
-        frequency_days: parseInt(formData.frequency_days),
-        last_completed_date: formData.last_completed_date || null,
-        next_due_date: formData.next_due_date
-      });
+      try {
+        await axios.post('/api/schedules/bulk', {
+          asset_ids: Array.from(selectedAssets),
+          task_name: formData.task_name,
+          frequency_days: parseInt(formData.frequency_days),
+          next_due_date: formData.next_due_date,
+          job_plan_id: formData.job_plan_id || null
+        });
 
-      setFormData({
-        asset_id: '',
-        task_name: '',
-        frequency_days: 30,
-        last_completed_date: '',
-        next_due_date: ''
-      });
-      setShowForm(false);
-      fetchData();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create schedule');
+        setFormData({
+          asset_id: '',
+          task_name: '',
+          frequency_days: 30,
+          last_completed_date: '',
+          next_due_date: '',
+          job_plan_id: ''
+        });
+        setSelectedAssets(new Set());
+        setBulkMode(false);
+        setShowForm(false);
+        fetchData();
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to create schedules');
+      }
+    } else {
+      if (!formData.asset_id || !formData.task_name) {
+        setError('Please select an asset and enter a task name');
+        return;
+      }
+
+      try {
+        await axios.post('/api/schedules', {
+          asset_id: formData.asset_id || null,
+          task_name: formData.task_name,
+          frequency_days: parseInt(formData.frequency_days),
+          last_completed_date: formData.last_completed_date || null,
+          next_due_date: formData.next_due_date,
+          job_plan_id: formData.job_plan_id || null
+        });
+
+        setFormData({
+          asset_id: '',
+          task_name: '',
+          frequency_days: 30,
+          last_completed_date: '',
+          next_due_date: '',
+          job_plan_id: ''
+        });
+        setShowForm(false);
+        fetchData();
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to create schedule');
+      }
     }
   };
 
@@ -108,19 +166,71 @@ function PMPage() {
           )}
 
           {!showForm ? (
-            <button className="success" onClick={() => setShowForm(true)}>+ New PM Schedule</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="success" onClick={() => { setShowForm(true); setBulkMode(false); }}>+ Single PM</button>
+              <button className="success" onClick={() => { setShowForm(true); setBulkMode(true); }}>+ Bulk PMs</button>
+              <button className="secondary" onClick={() => navigate('/job-plans')}>Manage Job Plans</button>
+            </div>
           ) : (
             <form onSubmit={handleAddSchedule} style={{ maxWidth: '600px' }}>
+              {bulkMode ? (
+                <div className="form-group">
+                  <label>Select Equipment *</label>
+                  <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '10px', maxHeight: '300px', overflowY: 'auto' }}>
+                    <div style={{ marginBottom: '10px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAssets.size === assets.length && assets.length > 0}
+                        onChange={toggleSelectAll}
+                        id="selectAll"
+                      />
+                      <label htmlFor="selectAll" style={{ marginLeft: '5px', fontWeight: 'bold' }}>
+                        Select All ({selectedAssets.size}/{assets.length})
+                      </label>
+                    </div>
+                    {assets.map(asset => (
+                      <div key={asset.id} style={{ marginBottom: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedAssets.has(asset.id)}
+                          onChange={() => toggleAssetSelection(asset.id)}
+                          id={`asset-${asset.id}`}
+                        />
+                        <label htmlFor={`asset-${asset.id}`} style={{ marginLeft: '5px' }}>
+                          {asset.name} ({asset.category})
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Equipment *</label>
+                  <select
+                    value={formData.asset_id}
+                    onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
+                  >
+                    <option value="">-- Select Equipment (or General) --</option>
+                    {assets.map(asset => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+
               <div className="form-group">
-                <label>Equipment *</label>
+                <label>Job Plan (Optional)</label>
                 <select
-                  value={formData.asset_id}
-                  onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
+                  value={formData.job_plan_id}
+                  onChange={(e) => setFormData({ ...formData, job_plan_id: e.target.value })}
                 >
-                  <option value="">-- Select Equipment (or General) --</option>
-                  {assets.map(asset => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name} ({asset.category})
+                  <option value="">-- No Job Plan --</option>
+                  {jobPlans.map(plan => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
                     </option>
                   ))}
                 </select>
@@ -189,8 +299,8 @@ function PMPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button type="submit">Create Schedule</button>
-                <button type="button" className="secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit">{bulkMode ? `Create ${selectedAssets.size} PMs` : 'Create Schedule'}</button>
+                <button type="button" className="secondary" onClick={() => { setShowForm(false); setSelectedAssets(new Set()); }}>Cancel</button>
               </div>
             </form>
           )}
