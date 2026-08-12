@@ -394,6 +394,42 @@ app.get('/api/history/schedules', authenticateToken, async (req, res) => {
   }
 });
 
+// Seed endpoint for creating default job plan
+app.post('/api/seed-job-plans', authenticateToken, async (req, res) => {
+  try {
+    const planResult = await pool.query(
+      `INSERT INTO job_plans (name, description, created_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING RETURNING id`,
+      ['Basic HVAC PM', 'Visual inspection and filter change for indoor and outdoor units']
+    );
+
+    if (planResult.rows.length > 0) {
+      const jobPlanId = planResult.rows[0].id;
+      const items = [
+        'Inspect outdoor unit for debris and damage',
+        'Check outdoor unit fins and clean if needed',
+        'Inspect indoor unit/air handler for dust and debris',
+        'Replace air filter',
+        'Check refrigerant lines for leaks',
+        'Inspect electrical connections',
+        'Check thermostat operation',
+        'Verify airflow from all vents'
+      ];
+
+      for (let i = 0; i < items.length; i++) {
+        await pool.query(
+          `INSERT INTO job_plan_items (job_plan_id, item_name, sort_order, created_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING`,
+          [jobPlanId, items[i], i + 1]
+        );
+      }
+      res.json({ message: 'Job plan seeded successfully', jobPlanId });
+    } else {
+      res.json({ message: 'Job plan already exists' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback to React for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
