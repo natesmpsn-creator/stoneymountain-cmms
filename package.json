@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "npm install && npm run build:client",
-    "build:client": "cd client-src && npm install && npm run build && cp -r build ../public",
+    "build:client": "cd client-src && npm install && npm run build && rm -rf ../public/static ../public/*.js ../public/*.css ../public/manifest.json && cp -r build/* ../public/",
     "start": "node server.js",
     "db:setup": "node db/setup.js"
   },
