@@ -367,6 +367,15 @@ app.post('/api/assets/bulk', authenticateToken, async (req, res) => {
   }
 });
 
+app.delete('/api/assets/all', authenticateToken, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM assets');
+    res.json({ message: 'All assets deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // History endpoints
 app.get('/api/history/requests', authenticateToken, async (req, res) => {
   try {

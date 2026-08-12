@@ -137,6 +137,19 @@ function AssetsPage() {
     setShowForm(false);
   };
 
+  const handleClearAllAssets = async () => {
+    if (!window.confirm('Are you sure? This will delete ALL equipment.')) return;
+
+    try {
+      await axios.delete('/api/assets/all');
+      setUploadSuccess('All equipment deleted');
+      fetchAssets();
+      setTimeout(() => setUploadSuccess(''), 3000);
+    } catch (err) {
+      setUploadError('Failed to delete equipment');
+    }
+  };
+
   return (
     <div>
       <div className="header">
@@ -197,6 +210,15 @@ function AssetsPage() {
               onChange={handleFileUpload}
               style={{ marginBottom: '10px' }}
             />
+            <div style={{ marginBottom: '10px' }}>
+              <button
+                className="danger"
+                onClick={handleClearAllAssets}
+                style={{ fontSize: '12px', padding: '6px 12px' }}
+              >
+                Clear All Equipment
+              </button>
+            </div>
             {uploadError && (
               <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '4px', marginBottom: '10px' }}>
                 {uploadError}
