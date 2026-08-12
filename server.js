@@ -179,6 +179,23 @@ app.post('/api/job-plans', authenticateToken, async (req, res) => {
 });
 
 // Preventative Maintenance Schedules
+app.get('/api/schedules/:id/checklist', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT jpi.id, jpi.item_name, jpi.sort_order
+      FROM pm_schedules ps
+      LEFT JOIN job_plans jp ON ps.job_plan_id = jp.id
+      LEFT JOIN job_plan_items jpi ON jp.id = jpi.job_plan_id
+      WHERE ps.id = $1
+      ORDER BY jpi.sort_order
+    `, [req.params.id]);
+
+    res.json(result.rows.filter(row => row.id !== null));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/schedules', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -243,6 +260,37 @@ app.patch('/api/schedules/:id', authenticateToken, async (req, res) => {
     `, [last_completed_date, next_due_date, id]);
 
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/schedules/:id/complete', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { last_completed_date, next_due_date, items } = req.body;
+
+  try {
+    const updateResult = await pool.query(`
+      UPDATE pm_schedules
+      SET last_completed_date = $1, next_due_date = $2, updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `, [last_completed_date, next_due_date, id]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Schedule not found' });
+    }
+
+    if (items && items.length > 0) {
+      for (const item of items) {
+        await pool.query(`
+          INSERT INTO pm_completion_items (pm_schedule_id, job_plan_item_id, status, comment, completed_at)
+          VALUES ($1, $2, $3, $4, NOW())
+        `, [id, item.job_plan_item_id, item.status, item.comment || null]);
+      }
+    }
+
+    res.json(updateResult.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

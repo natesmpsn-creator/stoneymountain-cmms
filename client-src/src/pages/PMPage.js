@@ -14,6 +14,10 @@ function PMPage() {
   const [showForm, setShowForm] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState(new Set());
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completingScheduleId, setCompletingScheduleId] = useState(null);
+  const [checklistItems, setChecklistItems] = useState([]);
+  const [completionData, setCompletionData] = useState({});
   const [formData, setFormData] = useState({
     asset_id: '',
     task_name: '',
@@ -136,16 +140,50 @@ function PMPage() {
     }
   };
 
-  const markComplete = async (id) => {
+  const openCompletionModal = async (scheduleId) => {
     try {
-      const nextDue = format(addDays(new Date(), 30), 'yyyy-MM-dd');
-      await axios.patch(`/api/schedules/${id}`, {
-        last_completed_date: format(new Date(), 'yyyy-MM-dd'),
-        next_due_date: nextDue
-      });
-      fetchData();
+      const res = await axios.get(`/api/schedules/${scheduleId}/checklist`);
+      setChecklistItems(res.data);
+      setCompletingScheduleId(scheduleId);
+      setCompletionData(
+        res.data.reduce((acc, item) => {
+          acc[item.id] = { status: 'good', comment: '' };
+          return acc;
+        }, {})
+      );
+      setShowCompletionModal(true);
     } catch (err) {
-      console.error('Failed to update schedule:', err);
+      console.error('Failed to load checklist:', err);
+    }
+  };
+
+  const closeCompletionModal = () => {
+    setShowCompletionModal(false);
+    setCompletingScheduleId(null);
+    setChecklistItems([]);
+    setCompletionData({});
+  };
+
+  const handleCompleteSchedule = async () => {
+    try {
+      const items = checklistItems.map(item => ({
+        job_plan_item_id: item.id,
+        status: completionData[item.id]?.status || 'good',
+        comment: completionData[item.id]?.comment || ''
+      }));
+
+      const nextDue = format(addDays(new Date(), 30), 'yyyy-MM-dd');
+
+      await axios.post(`/api/schedules/${completingScheduleId}/complete`, {
+        last_completed_date: format(new Date(), 'yyyy-MM-dd'),
+        next_due_date: nextDue,
+        items
+      });
+
+      fetchData();
+      closeCompletionModal();
+    } catch (err) {
+      console.error('Failed to complete schedule:', err);
     }
   };
 
@@ -347,10 +385,10 @@ function PMPage() {
                         {isOverdue && (
                           <button
                             className="success"
-                            onClick={() => markComplete(sched.id)}
+                            onClick={() => openCompletionModal(sched.id)}
                             style={{ padding: '4px 8px', fontSize: '11px' }}
                           >
-                            Mark Complete
+                            Complete
                           </button>
                         )}
                       </td>
@@ -362,6 +400,115 @@ function PMPage() {
           )}
         </div>
       </div>
+
+      {showCompletionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{ marginBottom: '20px' }}>Complete PM Task</h2>
+
+            {checklistItems.length > 0 ? (
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>
+                  Review each item and mark as Good or Bad. Add comments if needed.
+                </p>
+                {checklistItems.map(item => (
+                  <div key={item.id} style={{
+                    border: '1px solid #ddd',
+                    padding: '15px',
+                    borderRadius: '4px',
+                    marginBottom: '10px'
+                  }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{item.item_name}</div>
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <input
+                          type="radio"
+                          name={`status-${item.id}`}
+                          value="good"
+                          checked={(completionData[item.id]?.status || 'good') === 'good'}
+                          onChange={(e) => setCompletionData({
+                            ...completionData,
+                            [item.id]: { ...completionData[item.id], status: 'good' }
+                          })}
+                        />
+                        <span style={{ color: '#28a745' }}>Good</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <input
+                          type="radio"
+                          name={`status-${item.id}`}
+                          value="bad"
+                          checked={(completionData[item.id]?.status || 'good') === 'bad'}
+                          onChange={(e) => setCompletionData({
+                            ...completionData,
+                            [item.id]: { ...completionData[item.id], status: 'bad' }
+                          })}
+                        />
+                        <span style={{ color: '#dc3545' }}>Bad</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Add comment (optional)"
+                      value={completionData[item.id]?.comment || ''}
+                      onChange={(e) => setCompletionData({
+                        ...completionData,
+                        [item.id]: { ...completionData[item.id], comment: e.target.value }
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: '#666', marginBottom: '20px' }}>No checklist items for this PM task.</p>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                className="success"
+                onClick={handleCompleteSchedule}
+                style={{ flex: 1 }}
+              >
+                Mark Complete
+              </button>
+              <button
+                className="secondary"
+                onClick={closeCompletionModal}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
