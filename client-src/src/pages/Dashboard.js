@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import '../App.css';
 
 function Dashboard({ user, onLogout }) {
