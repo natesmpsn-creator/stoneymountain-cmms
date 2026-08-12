@@ -56,6 +56,10 @@ const setup = async () => {
     `);
 
     await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_job_plans_name ON job_plans(name)
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS job_plan_items (
         id SERIAL PRIMARY KEY,
         job_plan_id INTEGER REFERENCES job_plans(id) ON DELETE CASCADE,
@@ -102,6 +106,32 @@ const setup = async () => {
       `INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
       ['dalton@stoneymountain.local', daltonHash, 'Dalton McKie']
     );
+
+    const jobPlanResult = await pool.query(
+      `INSERT INTO job_plans (name, description, created_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING RETURNING id`,
+      ['Basic HVAC PM', 'Visual inspection and filter change for indoor and outdoor units']
+    );
+
+    if (jobPlanResult.rows.length > 0) {
+      const jobPlanId = jobPlanResult.rows[0].id;
+      const items = [
+        'Inspect outdoor unit for debris and damage',
+        'Check outdoor unit fins and clean if needed',
+        'Inspect indoor unit/air handler for dust and debris',
+        'Replace air filter',
+        'Check refrigerant lines for leaks',
+        'Inspect electrical connections',
+        'Check thermostat operation',
+        'Verify airflow from all vents'
+      ];
+
+      for (let i = 0; i < items.length; i++) {
+        await pool.query(
+          `INSERT INTO job_plan_items (job_plan_id, item_name, sort_order, created_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING`,
+          [jobPlanId, items[i], i + 1]
+        );
+      }
+    }
 
     console.log('Database setup complete');
     process.exit(0);
