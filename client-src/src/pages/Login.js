@@ -24,9 +24,13 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div className="container" style={{ maxWidth: '400px', marginTop: '60px' }}>
+    <div className="container" style={{ maxWidth: '400px', marginTop: '40px' }}>
       <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Stoneymountain CMMS</h1>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <img src="/logo.png" alt="Stoneymountain Baptist Church" style={{ height: '80px', marginBottom: '15px' }} />
+          <h1 style={{ margin: '0', fontSize: '24px' }}>Maintenance Manager</h1>
+          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>Stoneymountain Baptist Church</p>
+        </div>
 
         <form onSubmit={handleSubmit}>
           {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '4px', marginBottom: '20px' }}>{error}</div>}

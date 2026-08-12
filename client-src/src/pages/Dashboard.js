@@ -104,9 +104,12 @@ function Dashboard({ user, onLogout }) {
   return (
     <div>
       <div className="header">
-        <div>
-          <h1>Stoneymountain CMMS</h1>
-          <p style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>Maintenance & Asset Management</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <img src="/logo.png" alt="Stoneymountain Baptist Church" style={{ height: '60px' }} />
+          <div>
+            <h1 style={{ margin: '0' }}>Maintenance Manager</h1>
+            <p style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Stoneymountain Baptist Church</p>
+          </div>
         </div>
         <div className="header-right">
           <div className="user-info">
