@@ -4,6 +4,8 @@ import axios from 'axios';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import RequestForm from './pages/RequestForm';
+import AssetsPage from './pages/AssetsPage';
+import PMPage from './pages/PMPage';
 import './App.css';
 
 function App() {
@@ -39,6 +41,8 @@ function App() {
         <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
         <Route path="/dashboard" element={token ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="/request/new" element={token ? <RequestForm /> : <Navigate to="/login" />} />
+        <Route path="/assets" element={token ? <AssetsPage /> : <Navigate to="/login" />} />
+        <Route path="/pm-schedules" element={token ? <PMPage /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>
     </BrowserRouter>

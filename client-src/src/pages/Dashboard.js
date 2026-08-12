@@ -66,6 +66,18 @@ function Dashboard({ user, onLogout }) {
       </div>
 
       <div className="container">
+        <div style={{ marginBottom: '30px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Link to="/request/new" style={{ textDecoration: 'none' }}>
+            <button className="secondary">+ New Request</button>
+          </Link>
+          <Link to="/assets" style={{ textDecoration: 'none' }}>
+            <button className="secondary">Manage Assets</button>
+          </Link>
+          <Link to="/pm-schedules" style={{ textDecoration: 'none' }}>
+            <button className="secondary">PM Schedules</button>
+          </Link>
+        </div>
+
         <div className="grid" style={{ marginBottom: '30px' }}>
           <div className="card">
             <div style={{ textAlign: 'center' }}>
@@ -124,11 +136,6 @@ function Dashboard({ user, onLogout }) {
               <p>Loading...</p>
             ) : tab === 'requests' ? (
               <div>
-                <div style={{ marginBottom: '20px' }}>
-                  <Link to="/request/new">
-                    <button className="success">+ New Request</button>
-                  </Link>
-                </div>
 
                 {requests.length === 0 ? (
                   <p style={{ color: '#666' }}>No maintenance requests yet.</p>

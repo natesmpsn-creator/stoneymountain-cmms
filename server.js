@@ -196,6 +196,29 @@ app.post('/api/assets', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/assets/bulk', authenticateToken, async (req, res) => {
+  const { assets } = req.body;
+
+  if (!Array.isArray(assets) || assets.length === 0) {
+    return res.status(400).json({ error: 'No assets provided' });
+  }
+
+  try {
+    const inserted = [];
+    for (const asset of assets) {
+      const result = await pool.query(`
+        INSERT INTO assets (name, category, location, description, created_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        RETURNING *
+      `, [asset.name, asset.category, asset.location, asset.description]);
+      inserted.push(result.rows[0]);
+    }
+    res.status(201).json({ count: inserted.length, assets: inserted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback to React for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
