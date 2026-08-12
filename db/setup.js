@@ -47,15 +47,46 @@ const setup = async () => {
     `);
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_plans (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_plan_items (
+        id SERIAL PRIMARY KEY,
+        job_plan_id INTEGER REFERENCES job_plans(id) ON DELETE CASCADE,
+        item_name VARCHAR(255) NOT NULL,
+        sort_order INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS pm_schedules (
         id SERIAL PRIMARY KEY,
         asset_id INTEGER REFERENCES assets(id),
         task_name VARCHAR(255) NOT NULL,
         frequency_days INTEGER,
+        job_plan_id INTEGER REFERENCES job_plans(id),
         last_completed_date DATE,
         next_due_date DATE NOT NULL,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pm_completion_items (
+        id SERIAL PRIMARY KEY,
+        pm_schedule_id INTEGER REFERENCES pm_schedules(id),
+        job_plan_item_id INTEGER REFERENCES job_plan_items(id),
+        status VARCHAR(50),
+        comment TEXT,
+        completed_at TIMESTAMP DEFAULT NOW()
       )
     `);
 

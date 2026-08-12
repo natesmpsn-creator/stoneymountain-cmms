@@ -123,6 +123,61 @@ app.patch('/api/requests/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Job Plans
+app.get('/api/job-plans', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM job_plans ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/job-plans/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT jp.*,
+             json_agg(json_build_object('id', jpi.id, 'item_name', jpi.item_name, 'sort_order', jpi.sort_order)
+                      ORDER BY jpi.sort_order) as items
+      FROM job_plans jp
+      LEFT JOIN job_plan_items jpi ON jp.id = jpi.job_plan_id
+      WHERE jp.id = $1
+      GROUP BY jp.id
+    `, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Job plan not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/job-plans', authenticateToken, async (req, res) => {
+  const { name, description, items } = req.body;
+
+  try {
+    const planResult = await pool.query(`
+      INSERT INTO job_plans (name, description, created_at)
+      VALUES ($1, $2, NOW())
+      RETURNING *
+    `, [name, description]);
+
+    const planId = planResult.rows[0].id;
+
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        await pool.query(`
+          INSERT INTO job_plan_items (job_plan_id, item_name, sort_order, created_at)
+          VALUES ($1, $2, $3, NOW())
+        `, [planId, items[i], i + 1]);
+      }
+    }
+
+    res.status(201).json(planResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Preventative Maintenance Schedules
 app.get('/api/schedules', authenticateToken, async (req, res) => {
   try {
@@ -137,16 +192,39 @@ app.get('/api/schedules', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/schedules', authenticateToken, async (req, res) => {
-  const { asset_id, task_name, frequency_days, last_completed_date, next_due_date } = req.body;
+  const { asset_id, task_name, frequency_days, last_completed_date, next_due_date, job_plan_id } = req.body;
 
   try {
     const result = await pool.query(`
-      INSERT INTO pm_schedules (asset_id, task_name, frequency_days, last_completed_date, next_due_date, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO pm_schedules (asset_id, task_name, frequency_days, job_plan_id, last_completed_date, next_due_date, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *
-    `, [asset_id, task_name, frequency_days, last_completed_date, next_due_date]);
+    `, [asset_id, task_name, frequency_days, job_plan_id || null, last_completed_date, next_due_date]);
 
     res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/schedules/bulk', authenticateToken, async (req, res) => {
+  const { asset_ids, task_name, frequency_days, next_due_date, job_plan_id } = req.body;
+
+  if (!asset_ids || asset_ids.length === 0) {
+    return res.status(400).json({ error: 'No assets selected' });
+  }
+
+  try {
+    const created = [];
+    for (const assetId of asset_ids) {
+      const result = await pool.query(`
+        INSERT INTO pm_schedules (asset_id, task_name, frequency_days, job_plan_id, next_due_date, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING *
+      `, [assetId, task_name, frequency_days, job_plan_id || null, next_due_date]);
+      created.push(result.rows[0]);
+    }
+    res.status(201).json({ count: created.length, schedules: created });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
