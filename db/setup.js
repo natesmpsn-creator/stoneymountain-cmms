@@ -78,6 +78,7 @@ const setup = async () => {
         job_plan_id INTEGER REFERENCES job_plans(id),
         last_completed_date DATE,
         next_due_date DATE NOT NULL,
+        completed_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )

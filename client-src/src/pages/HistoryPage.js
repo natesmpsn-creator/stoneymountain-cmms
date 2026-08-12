@@ -120,6 +120,7 @@ function HistoryPage() {
                         <th>Asset</th>
                         <th>Frequency</th>
                         <th>Last Completed</th>
+                        <th>Completed By</th>
                         <th>Next Due</th>
                       </tr>
                     </thead>
@@ -130,6 +131,7 @@ function HistoryPage() {
                           <td>{sched.asset_id || 'General'}</td>
                           <td>{sched.frequency_days} days</td>
                           <td>{sched.last_completed_date ? format(new Date(sched.last_completed_date), 'MMM d, yyyy') : 'Never'}</td>
+                          <td>{sched.completed_by_name || '—'}</td>
                           <td>{format(new Date(sched.next_due_date), 'MMM d, yyyy')}</td>
                         </tr>
                       ))}

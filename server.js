@@ -268,14 +268,15 @@ app.patch('/api/schedules/:id', authenticateToken, async (req, res) => {
 app.post('/api/schedules/:id/complete', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { last_completed_date, next_due_date, items } = req.body;
+  const userId = req.user.id;
 
   try {
     const updateResult = await pool.query(`
       UPDATE pm_schedules
-      SET last_completed_date = $1, next_due_date = $2, updated_at = NOW()
-      WHERE id = $3
+      SET last_completed_date = $1, next_due_date = $2, completed_by = $3, updated_at = NOW()
+      WHERE id = $4
       RETURNING *
-    `, [last_completed_date, next_due_date, id]);
+    `, [last_completed_date, next_due_date, userId, id]);
 
     if (updateResult.rows.length === 0) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -393,9 +394,11 @@ app.get('/api/history/requests', authenticateToken, async (req, res) => {
 app.get('/api/history/schedules', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT * FROM pm_schedules
-      WHERE last_completed_date IS NOT NULL
-      ORDER BY last_completed_date DESC
+      SELECT ps.*, u.name as completed_by_name
+      FROM pm_schedules ps
+      LEFT JOIN users u ON ps.completed_by = u.id
+      WHERE ps.last_completed_date IS NOT NULL
+      ORDER BY ps.last_completed_date DESC
     `);
     res.json(result.rows);
   } catch (err) {
