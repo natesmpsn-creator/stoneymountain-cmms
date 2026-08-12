@@ -10,6 +10,7 @@ function AssetsPage() {
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -105,13 +106,35 @@ function AssetsPage() {
     setUploadError('');
 
     try {
-      await axios.post('/api/assets', formData);
+      if (editingId) {
+        await axios.patch(`/api/assets/${editingId}`, formData);
+        setEditingId(null);
+      } else {
+        await axios.post('/api/assets', formData);
+      }
       setFormData({ name: '', category: '', location: '', description: '' });
       setShowForm(false);
       fetchAssets();
     } catch (err) {
-      setUploadError(err.response?.data?.error || 'Failed to add asset');
+      setUploadError(err.response?.data?.error || 'Failed to save asset');
     }
+  };
+
+  const startEdit = (asset) => {
+    setEditingId(asset.id);
+    setFormData({
+      name: asset.name,
+      category: asset.category,
+      location: asset.location,
+      description: asset.description
+    });
+    setShowForm(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({ name: '', category: '', location: '', description: '' });
+    setShowForm(false);
   };
 
   return (
@@ -122,6 +145,46 @@ function AssetsPage() {
       </div>
 
       <div className="container">
+        <div className="card">
+          <h3 style={{ marginBottom: '20px' }}>Equipment ({assets.length})</h3>
+          {loading ? (
+            <p>Loading...</p>
+          ) : assets.length === 0 ? (
+            <p style={{ color: '#666' }}>No equipment added yet. Add manually or import from CSV.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Notes</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assets.map(asset => (
+                  <tr key={asset.id}>
+                    <td><strong>{asset.name}</strong></td>
+                    <td>{asset.category}</td>
+                    <td>{asset.location}</td>
+                    <td style={{ fontSize: '12px', color: '#666' }}>{asset.description}</td>
+                    <td>
+                      <button
+                        className="secondary"
+                        onClick={() => startEdit(asset)}
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
         <div className="card">
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ marginBottom: '15px' }}>Import Equipment from CSV</h3>
@@ -149,7 +212,7 @@ function AssetsPage() {
           <hr style={{ margin: '20px 0' }} />
 
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ marginBottom: '15px' }}>Add Equipment Manually</h3>
+            <h3 style={{ marginBottom: '15px' }}>{editingId ? 'Edit Equipment' : 'Add Equipment Manually'}</h3>
             {!showForm ? (
               <button className="success" onClick={() => setShowForm(true)}>+ Add Asset</button>
             ) : (
@@ -196,43 +259,14 @@ function AssetsPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit">Add Asset</button>
-                  <button type="button" className="secondary" onClick={() => setShowForm(false)}>Cancel</button>
+                  <button type="submit">{editingId ? 'Update Asset' : 'Add Asset'}</button>
+                  <button type="button" className="secondary" onClick={cancelEdit}>Cancel</button>
                 </div>
               </form>
             )}
           </div>
         </div>
 
-        <div className="card">
-          <h3 style={{ marginBottom: '20px' }}>Equipment ({assets.length})</h3>
-          {loading ? (
-            <p>Loading...</p>
-          ) : assets.length === 0 ? (
-            <p style={{ color: '#666' }}>No equipment added yet. Import from CSV or add manually.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assets.map(asset => (
-                  <tr key={asset.id}>
-                    <td><strong>{asset.name}</strong></td>
-                    <td>{asset.category}</td>
-                    <td>{asset.location}</td>
-                    <td style={{ fontSize: '12px', color: '#666' }}>{asset.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </div>
     </div>
   );

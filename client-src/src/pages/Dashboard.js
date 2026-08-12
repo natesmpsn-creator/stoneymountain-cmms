@@ -76,6 +76,9 @@ function Dashboard({ user, onLogout }) {
           <Link to="/pm-schedules" style={{ textDecoration: 'none' }}>
             <button className="secondary">PM Schedules</button>
           </Link>
+          <Link to="/history" style={{ textDecoration: 'none' }}>
+            <button className="secondary">History</button>
+          </Link>
         </div>
 
         <div className="grid" style={{ marginBottom: '30px' }}>

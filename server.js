@@ -196,6 +196,28 @@ app.post('/api/assets', authenticateToken, async (req, res) => {
   }
 });
 
+app.patch('/api/assets/:id', authenticateToken, async (req, res) => {
+  const { name, category, location, description } = req.body;
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`
+      UPDATE assets
+      SET name = $1, category = $2, location = $3, description = $4, updated_at = NOW()
+      WHERE id = $5
+      RETURNING *
+    `, [name, category, location, description, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/assets/bulk', authenticateToken, async (req, res) => {
   const { assets } = req.body;
 
@@ -214,6 +236,33 @@ app.post('/api/assets/bulk', authenticateToken, async (req, res) => {
       inserted.push(result.rows[0]);
     }
     res.status(201).json({ count: inserted.length, assets: inserted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// History endpoints
+app.get('/api/history/requests', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM maintenance_requests
+      WHERE status = 'completed'
+      ORDER BY updated_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/history/schedules', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM pm_schedules
+      WHERE last_completed_date IS NOT NULL
+      ORDER BY last_completed_date DESC
+    `);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
