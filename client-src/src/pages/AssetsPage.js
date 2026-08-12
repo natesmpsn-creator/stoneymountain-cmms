@@ -7,7 +7,6 @@ function AssetsPage() {
   const navigate = useNavigate();
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [csvFile, setCsvFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -93,7 +92,6 @@ function AssetsPage() {
         const res = await axios.post('/api/assets/bulk', { assets: parsed });
         setUploadSuccess(`Successfully imported ${res.data.count} assets`);
         fetchAssets();
-        setCsvFile(null);
         setTimeout(() => setUploadSuccess(''), 3000);
       } catch (err) {
         setUploadError(err.response?.data?.error || 'Upload failed');
