@@ -5,7 +5,10 @@ node_modules/
 *.log
 client-src/node_modules/
 client-src/build/
-/public/
+/public/*.js
+/public/*.css
+/public/static/
+/public/index.html
 .vscode/
 .idea/
 dist/
