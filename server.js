@@ -548,6 +548,26 @@ app.get('/api/history/schedules', authenticateToken, async (req, res) => {
   }
 });
 
+// Migrate user emails to new format
+app.post('/api/migrate-users', async (req, res) => {
+  try {
+    const salt = await bcryptjs.genSalt(10);
+    const hash = await bcryptjs.hash('changeme123', salt);
+
+    await pool.query(`
+      UPDATE users SET email = $1 WHERE email = $2
+    `, ['nate@stoneymt.local', 'nate@stoneymountain.local']);
+
+    await pool.query(`
+      UPDATE users SET email = $1 WHERE email = $2
+    `, ['dalton@stoneymt.local', 'dalton@stoneymountain.local']);
+
+    res.json({ message: 'Users migrated to new email format' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Seed endpoint for creating default job plan
 app.post('/api/seed-job-plans', authenticateToken, async (req, res) => {
   try {
