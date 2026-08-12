@@ -26,8 +26,8 @@ function Login({ onLogin }) {
   return (
     <div className="container" style={{ maxWidth: '400px', marginTop: '40px' }}>
       <div className="card">
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <img src="/logo.png" alt="Stoney Mountain Baptist Church" style={{ height: '80px', marginBottom: '15px' }} />
+        <div style={{ textAlign: 'center', marginBottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="/logo.png" alt="Stoney Mountain Baptist Church" style={{ height: '60px', marginBottom: '15px' }} />
           <h1 style={{ margin: '0', fontSize: '24px' }}>Maintenance Manager</h1>
           <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>Stoney Mountain Baptist Church</p>
         </div>
@@ -42,7 +42,6 @@ function Login({ onLogin }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="nate@stoneymt.local"
             />
           </div>
 
@@ -53,7 +52,6 @@ function Login({ onLogin }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="changeme123"
             />
           </div>
 
