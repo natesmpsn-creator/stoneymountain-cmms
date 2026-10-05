@@ -155,6 +155,28 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.post('/api/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) return res.status(404).json({ message: 'User not found' });
+
+    const user = userResult.rows[0];
+    const validPassword = await bcryptjs.compare(currentPassword, user.password_hash);
+
+    if (!validPassword) return res.status(401).json({ message: 'Current password is incorrect' });
+
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, userId]);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Maintenance Requests
 app.get('/api/requests', authenticateToken, async (req, res) => {
   try {

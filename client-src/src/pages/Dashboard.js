@@ -115,6 +115,9 @@ function Dashboard({ user, onLogout }) {
           <div className="user-info">
             <p>Welcome, <strong>{user.name}</strong></p>
           </div>
+          <Link to="/settings" style={{ textDecoration: 'none' }}>
+            <button className="secondary">Settings</button>
+          </Link>
           <button className="secondary" onClick={handleLogout}>Logout</button>
         </div>
       </div>

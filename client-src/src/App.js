@@ -8,6 +8,7 @@ import AssetsPage from './pages/AssetsPage';
 import PMPage from './pages/PMPage';
 import JobPlansPage from './pages/JobPlansPage';
 import HistoryPage from './pages/HistoryPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
         <Route path="/pm-schedules" element={token ? <PMPage /> : <Navigate to="/login" />} />
         <Route path="/job-plans" element={token ? <JobPlansPage /> : <Navigate to="/login" />} />
         <Route path="/history" element={token ? <HistoryPage /> : <Navigate to="/login" />} />
+        <Route path="/settings" element={token ? <SettingsPage user={user} /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>
     </BrowserRouter>
