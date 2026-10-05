@@ -30,8 +30,13 @@ const initializeDatabase = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT NOW()
       )
+    `);
+
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
     `);
 
     await pool.query(`
@@ -174,6 +179,77 @@ app.post('/api/change-password', authenticateToken, async (req, res) => {
     res.json({ message: 'Password changed successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// User Management
+app.get('/api/users', authenticateToken, async (req, res) => {
+  try {
+    const userResult = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+    if (userResult.rows.length === 0 || !userResult.rows[0].is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const result = await pool.query('SELECT id, email, name, is_admin, created_at FROM users ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users', authenticateToken, async (req, res) => {
+  const { email, name, password } = req.body;
+
+  try {
+    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+    if (adminCheck.rows.length === 0 || !adminCheck.rows[0].is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (!email || !name || !password) {
+      return res.status(400).json({ error: 'Email, name, and password required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+    const result = await pool.query(`
+      INSERT INTO users (email, name, password_hash, is_admin, created_at)
+      VALUES ($1, $2, $3, FALSE, NOW())
+      RETURNING id, email, name, is_admin, created_at
+    `, [email, name, hashedPassword]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      res.status(400).json({ error: 'Email already exists' });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
+  }
+});
+
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+    if (adminCheck.rows.length === 0 || !adminCheck.rows[0].is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (parseInt(req.params.id) === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -599,6 +675,17 @@ app.post('/api/migrate-users', async (req, res) => {
 });
 
 // Seed endpoint for creating default job plan
+app.post('/api/seed-admins', async (req, res) => {
+  try {
+    await pool.query(`
+      UPDATE users SET is_admin = TRUE WHERE email IN ('nate@stoneymt.local', 'dalton@stoneymt.local')
+    `);
+    res.json({ message: 'Admin users updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/seed-job-plans', authenticateToken, async (req, res) => {
   try {
     const planResult = await pool.query(
